@@ -1,0 +1,127 @@
+\documentclass{article}
+
+% page layout and typesetting
+\usepackage[letterpaper, textwidth=5.0in, textheight=9.0in]{geometry}
+\addtolength{\topmargin}{0.2in}
+\usepackage{setspace}
+\setstretch{1.08}
+\sloppy\sloppypar\raggedbottom\frenchspacing
+\pagestyle{myheadings}
+\markright{\sffamily Hogg / Reconstructing movies from \textsl{Gaia} transit images}
+\renewcommand{\paragraph}[1]{\par\medskip\noindent{\textbf{#1}}~---}
+\newcommand{\sectionname}{Section}
+\newcommand{\secref}[1]{\sectionname~\ref{#1}}
+
+% mathematics
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\newcommand{\ee}{\mathrm{e}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\set}[1]{\mathscr{#1}}
+
+% code and SQL and database entries
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+
+% collaboration communication
+\usepackage{xcolor}             % draft-note colours 
+\newcommand{\hoggsay}[1]{{\color{blue} (Hogg says: #1)}}
+
+\title{\bfseries Reconstructing tiny movies from \textsl{Gaia} transit images.}
+\author{%
+\textbf{David W. Hogg} \\ CCPP of NYU \& MPIA
+\and
+\textbf{Jimmy Guan} \\ NYU Courant
+\and
+\textbf{Theodore Landa} \\ CCPP of NYU
+}
+\date{\textit{draft version} --- 2026 October 20}
+\begin{document}
+\maketitle
+
+\section{Assumptions and choices}
+\paragraph{Setup}
+We are trying to reconstruct a tiny, circular, time-dependent image or \emph{scene} $a(r,\phi,t)$, centered on a finite-parallax, slowly moving (in an angular or proper-motion sense) star.
+At every good epoch $t_j$ ($1\leq j\leq N$), \textsl{Gaia} scans across the star and delivers a small rectangular image $y_j$.
+At fainter magnitudes, \textsl{Gaia} only delivers a one-dimensional image, but we are going to start here by considering the brightest sources, for which two-dimensional images are delivered.
+Each image $y_j$ is close to (but not exactly) centered on the position of the star at the epoch.
+That position is displaced from (say) the \textsl{Gaia} reference position for the star by the parallactic displacement and the proper motion times some time interval.
+
+\paragraph{Housekeeping data}
+Very importantly, each image $y_j$ is taken at a known scan angle $\psi_j$.
+This sets the relative orientation of the image and the scene.
+Both because windowing is set on board the spacecraft, without knowledge of the sky or its sources,
+and because the detector is composed of finite pixels,
+each image $y_j$ is not centered precisely on the star, but is instead offset by some $\Delta u_j,\Delta v_j$ (in the implicit $u,v$ coordinate system of the image) relative to that centering.
+
+In addition to this, and (we hope) less importantly, we know the position $\zeta_j$ in the across-scan direction at which the image $y_j$ was taken.
+This might matter because the image quality (image distortions, point-spread function, and noise level) might depend on this across-scan direction (which sets the CCD identity and the in-CCD row position).
+If all of this matters---and it probably does---the story gets more complicated than what we have here.
+
+\paragraph{Image and scene representations}
+We are going to use some applied mathematics passed down to us from the ancients here.
+Because the scene, and the information we will have about it, both live in a tiny and roughly circular patch on the sky, we will use a basis for the scene $a(r,\phi,t)$ of the form
+\begin{align}
+    a(r,\phi,t) &= \sum_{n,m \in \set{A}} a_{n,m}(t)\,J_{n,m}(r)\,\ee^{i\,m\,\phi} \\
+    a_{n,-m} &= a_{n,m}^\ast ~,
+\end{align}
+where the $a_{nm}$ are coefficients,
+the $J_{n,m}(r)$ are radial basis functions (to be described below),
+and the set $\set{A}$ is the list or set of $n,m$ pairs that we are going to employ.
+The scene is a function of time, so the coefficients are functions of time (more on this below).
+
+We are going to represent the incoming data, without loss or compression, in the Fourier domain.
+That is, each datum $y_j$ will be represented as
+\begin{align}
+    y_j(u, v) &= \sum_{k,\ell \in \set{Y}} y_{j,k,\ell}\,\ee^{i\,k\,u}\,\ee^{i\,\ell\,v} \\
+    y_{j,-k,\ell} &= y_{j,k,-\ell} = y_{j,-k,-\ell}^\ast = y_{j,k,\ell}^\ast ~,
+\end{align}
+where $u,v$ are the two-dimensional (integer) pixel coordinates of the image.
+Later when we consider one-dimensional images, integrating over the $v$ coordinate is (probably) equivalent to setting $\ell=0$ in the Fourier domain.
+
+\paragraph{Radial basis functions}
+\hoggsay{We're going to make these by approximating a diagonalization of some information tensor.}
+
+\paragraph{Noise model}
+
+\paragraph{Outliers and robustness}
+\hoggsay{The outliers are generally compact in real space, and nasty in Fourier space. How to deal?}
+
+\paragraph{Generative model}
+\hoggsay{We believe that}
+With these choices the generative model becomes
+\begin{align}
+    y_{j,k,\ell} = \sum_{n,m \in \set{A}} \ee^{i\,k\,\Delta u_j}\,\ee^{i\,\ell\,\Delta v_j}\,\ee^{-i\,m\,\psi_j}\,W_{k,\ell}^{n,m}\,a_{n,m}(t_j) + s_{j,k,\ell} ~,
+\end{align}
+where the linear operator $W_{k,\ell}^{n,m}$ can be pre-computed once and for all $j$ (actually not just for this scene but for all scenes, ever), independent of scan angles and offsets.
+That is, because of the magic of translations in the rectangular fourier basis for the images,
+and because of the magic of rotations in the circular basis of the scene,
+the linear operator for each image is just complex exponentials times a generic linear operator.
+
+The linear operator $W_{k,\ell}^{n,m}$ can be explicitly calculated by performing overlap integrals, or else it could be \emph{learned from data}.
+In principle the operator depends on housekeeping data, and especially the across-can position $\zeta_j$ at which image $y_j$ was taken.
+
+\paragraph{Implementation notes}
+
+\section{Data}
+The above assumptions suggest that we have these beautiful data.
+We do!
+But in fact the data do not emerge from the \textsl{Gaia} archive with all the properties we need.
+Thus we must do some pre-processing, described here.
+
+\hoggsay{time to read documentation}
+
+\hoggsay{Should we delete outliers before starting?}
+
+\section{Method}
+Every image $y_n$ ($1\leq n\leq N$) scans across the tiny scene at a scan angle $\psi_n$.
+The fiducial point (on the sky) that locates the center of the scene will not in general be at the center of the image $y_n$; instead there will be a small offset $\Delta u,\Delta v$ in the $u,v$ image coordinates between the center of the image and the fiducial point of the scene.
+
+
+\paragraph{Acknowledgments}
+The content here is very influenced by conversations with
+  Kareem El-Badry (Caltech),
+  Sahar Shahaf (MPIA), and
+  Hans-Walter Rix (MPIA).
+No LLMs were used in the writing of the words in this document.
+
+\end{document}
