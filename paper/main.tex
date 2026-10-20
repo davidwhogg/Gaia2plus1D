@@ -53,7 +53,7 @@ Both because windowing is set on board the spacecraft, without knowledge of the 
 and because the detector is composed of finite pixels,
 each image $y_j$ is not centered precisely on the star, but is instead offset by some $\Delta u_j,\Delta v_j$ (in the implicit $u,v$ coordinate system of the image) relative to that centering.
 
-In addition to this, and (we hope) less importantly, we know the position $\zeta_j$ in the across-scan direction at which the image $y_j$ was taken.
+In addition to this, and (we hope) less importantly, we know the CCD from which the image $y_j$ was read, and the position $\zeta_j$ in the across-scan direction at which the image $y_j$ was taken.
 This might matter because the image quality (image distortions, point-spread function, and noise level) might depend on this across-scan direction (which sets the CCD identity and the in-CCD row position).
 If all of this matters---and it probably does---the story gets more complicated than what we have here.
 
@@ -78,6 +78,18 @@ That is, each datum $y_j$ will be represented as
 where $u,v$ are the two-dimensional (integer) pixel coordinates of the image.
 Later when we consider one-dimensional images, integrating over the $v$ coordinate is (probably) equivalent to setting $\ell=0$ in the Fourier domain.
 
+\paragraph{Pixel-response functions}
+We get delivered some pixel-convolved point-spread function (hereafter \emph{pixel response function} or PRF) in the input data $y_n$.
+This PRF is anisotropic, with more information (more Fourier-space coverage) in the along-scan direction $u$ than in the across-scan direction $v$ \hoggsay{we should change from $u,v$ to $w,z$, because that's closer to the \textsl{Gaia} conventions.}.
+We want some ``best'' pixel-response function in the output scene $a$.
+Because we dislike strong deconvolution, we'd like the output scene $a$ to have a circular PRF that has the same one-dimensional profile as the good direction (the along-scan direction) of the data PRF.
+
+If we think about the generative model (coming up below) that relates the scene $a$ to each datum $y_n$, the model involves a translation, rotation, and projection from the $a(r,\phi,t)$ basis to the $y_n$ image basis.
+It also involves a convolution or smoothing in the across scan direction (because the PRF is worse in that direction).
+In Fourier space, this looks like a suppression of high-$\ell$ modes (modes with high spatial frequency in the across-scan $v$ direction).
+
+\hoggsay{In detail, what do we know about these PRFs?}
+
 \paragraph{Radial basis functions}
 \hoggsay{We're going to make these by approximating a diagonalization of some information tensor.}
 
@@ -93,14 +105,18 @@ With these choices the generative model becomes
     y_{j,k,\ell} = \sum_{n,m \in \set{A}} \ee^{i\,k\,\Delta u_j}\,\ee^{i\,\ell\,\Delta v_j}\,\ee^{-i\,m\,\psi_j}\,W_{k,\ell}^{n,m}\,a_{n,m}(t_j) + s_{j,k,\ell} ~,
 \end{align}
 where the linear operator $W_{k,\ell}^{n,m}$ can be pre-computed once and for all $j$ (actually not just for this scene but for all scenes, ever), independent of scan angles and offsets.
-That is, because of the magic of translations in the rectangular fourier basis for the images,
+That is, because of the magic of translations in the rectangular Fourier basis for the images,
 and because of the magic of rotations in the circular basis of the scene,
 the linear operator for each image is just complex exponentials times a generic linear operator.
 
-The linear operator $W_{k,\ell}^{n,m}$ can be explicitly calculated by performing overlap integrals, or else it could be \emph{learned from data}.
-In principle the operator depends on housekeeping data, and especially the across-can position $\zeta_j$ at which image $y_j$ was taken.
+The linear operator $W_{k,\ell}^{n,m}$ can be explicitly calculated by performing samplings of the scene basis functions in the image space and Fourier transforming.
+That's the geometric part of the operator;
+the operator also does the work of suppressing across-scan ($v$-direction) power,
+which depends on a ratio (in Fourier space) of the along-scan and across PRFs.
 
-\paragraph{Implementation notes}
+In principle the operator depends on housekeeping data, and especially the CCD number, and the across-can position $\zeta_j$ at which image $y_j$ was taken.
+The reason for this is that there are plate-scale, PRF, and throughput variations with focal-plane position.
+Thus, even if we can compute the operator $W_{k,\ell}^{n,m}$, we might also have to learn an adjustment $\delta W_{k,\ell}^{n,m}(x_j)$, where $x_j$ is an ordered list of all the conceivably relevant housekeeping data.
 
 \section{Data}
 The above assumptions suggest that we have these beautiful data.
@@ -108,7 +124,9 @@ We do!
 But in fact the data do not emerge from the \textsl{Gaia} archive with all the properties we need.
 Thus we must do some pre-processing, described here.
 
-\hoggsay{time to read documentation}
+\hoggsay{Time to read documentation!}
+
+\hoggsay{Are the pixels not square? No they are not; they are 3-to-1, like the mirror, but oriented correctly!}
 
 \hoggsay{Should we delete outliers before starting?}
 
@@ -116,6 +134,10 @@ Thus we must do some pre-processing, described here.
 Every image $y_n$ ($1\leq n\leq N$) scans across the tiny scene at a scan angle $\psi_n$.
 The fiducial point (on the sky) that locates the center of the scene will not in general be at the center of the image $y_n$; instead there will be a small offset $\Delta u,\Delta v$ in the $u,v$ image coordinates between the center of the image and the fiducial point of the scene.
 
+\paragraph{Implementation notes}
+
+\section{Discussion}
+\hoggsay{Ugh.}
 
 \paragraph{Acknowledgments}
 The content here is very influenced by conversations with
